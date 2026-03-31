@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>图书管理中心</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --bg-1: #f6f2e7;
+      --bg-2: #e8f1e5;
+      --paper: #fffdf8;
+      --ink: #2a2f24;
+      --subtle: #6d7461;
+      --line: #d8d2c0;
+      --accent: #2f6d4f;
+      --accent-2: #1f5039;
+      --warn: #9d5b2c;
+      --danger: #bb3f3f;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      color: var(--ink);
+      font-family: "Noto Serif SC", "Microsoft YaHei", serif;
+      background:
+        radial-gradient(circle at 12% 8%, #f1e2c8 0 20%, transparent 21%),
+        radial-gradient(circle at 88% 14%, #cfe4d5 0 24%, transparent 25%),
+        linear-gradient(140deg, var(--bg-1), var(--bg-2));
+      min-height: 100vh;
+    }
+
+    .wrap {
+      width: min(1100px, 94vw);
+      margin: 30px auto;
+      display: grid;
+      grid-template-columns: 1.3fr 1fr;
+      gap: 18px;
+    }
+
+    .panel {
+      background: color-mix(in srgb, var(--paper) 90%, white 10%);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 18px;
+      box-shadow: 0 12px 30px rgba(42, 47, 36, 0.08);
+    }
+
+    h1,
+    h2 {
+      margin: 0 0 10px;
+      letter-spacing: 0.02em;
+    }
+
+    .subtitle {
+      margin: 0 0 14px;
+      color: var(--subtle);
+    }
+
+    .admin-nav {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      margin-bottom: 10px;
+    }
+
+    .nav-group-label {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      color: var(--subtle);
+      font-weight: 700;
+      padding: 10px 0 6px 14px;
+      margin-bottom: 2px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .nav-group-label:not(:first-child) {
+      margin-top: 8px;
+    }
+
+    .admin-nav a {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      color: #414d3e;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 0.95rem;
+      padding: 10px 14px;
+      border-radius: 10px;
+      border-left: 3px solid transparent;
+      background: transparent;
+      transition: border-color 140ms, color 140ms, background 140ms;
+    }
+
+    .admin-nav a::before {
+      content: '';
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: currentColor;
+      opacity: 0.25;
+      flex-shrink: 0;
+      transition: opacity 140ms, transform 140ms;
+    }
+
+    .admin-nav a:hover {
+      border-left-color: var(--accent);
+      color: var(--accent);
+      background: #ecf5ef;
+    }
+
+    .admin-nav a:hover::before {
+      opacity: 1;
+      transform: scale(1.3);
+    }
+
+    .admin-nav a.active {
+      border-left-color: var(--accent);
+      color: var(--accent-2);
+      background: #dff0e6;
+      font-weight: 700;
+    }
+
+    .admin-nav a.active::before {
+      opacity: 1;
+      background: var(--accent);
+    }
+
+    .nav-divider {
+      height: 1px;
+      background: var(--line);
+      margin: 6px 0;
+    }
+
+    .utility-links {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 8px;
+    }
+
+    .utility-links a {
+      color: var(--accent);
+      text-decoration: none;
+      font-weight: 700;
+    }
+
+    .auth-inline {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-left: auto;
+      flex-wrap: wrap;
+    }
+
+    .auth-user {
+      display: inline-flex;
+      align-items: center;
+      padding: 6px 12px;
+      border-radius: 999px;
+      background: #eef5ef;
+      border: 1px solid #cfe1d1;
+      color: var(--accent-2);
+      font-weight: 700;
+    }
+
+    .auth-logout {
+      border: 0;
+      border-radius: 999px;
+      padding: 8px 14px;
+      background: #7d8674;
+      color: #fff;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .auth-logout:hover {
+      background: #656d5c;
+    }
+
+    .book-form {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .book-form .full {
+      grid-column: 1 / -1;
+    }
+
+    label {
+      display: block;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+
+    input,
+    select,
+    button {
+      font: inherit;
+    }
+
+    input,
+    select {
+      width: 100%;
+      border-radius: 10px;
+      border: 1px solid var(--line);
+      padding: 9px 10px;
+      background: #fff;
+      color: var(--ink);
+    }
+
+    .actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    button {
+      border: 0;
+      border-radius: 999px;
+      padding: 9px 16px;
+      background: var(--accent);
+      color: #fff;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: var(--accent-2);
+    }
+
+    button.secondary {
+      background: #7d8674;
+    }
+
+    button.secondary:hover {
+      background: #656d5c;
+    }
+
+    button.warn {
+      background: var(--warn);
+    }
+
+    button.warn:hover {
+      background: #834b22;
+    }
+
+    .status {
+      margin: 0;
+      font-weight: 700;
+      color: var(--subtle);
+    }
+
+    .status.error {
+      color: var(--danger);
+    }
+
+    .table-wrap {
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: linear-gradient(180deg, #fffefb 0%, #f8f4ea 100%);
+      padding: 8px;
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+      overflow-x: auto;
+    }
+
+    .table-pagination {
+      margin-top: 10px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .page-btn {
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 6px 12px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      background: #fff;
+      color: var(--subtle);
+      cursor: pointer;
+      transition: border-color 180ms, background 180ms, color 180ms;
+    }
+
+    .page-btn:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: #eef6f0;
+    }
+
+    .page-btn.active {
+      border-color: var(--accent);
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .page-btn:disabled {
+      border-color: var(--line);
+      background: #f5f5f5;
+      color: #a8ada2;
+      cursor: not-allowed;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      background: #fff;
+      overflow: hidden;
+    }
+
+    th,
+    td {
+      text-align: left;
+      padding: 11px 10px;
+      border-bottom: 1px solid var(--line);
+      font-size: 0.92rem;
+      vertical-align: top;
+    }
+
+    th {
+      background: linear-gradient(180deg, #f4efdf 0%, #ede5d2 100%);
+      font-size: 0.82rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #566148;
+      position: sticky;
+      top: 0;
+      z-index: 1;
+    }
+
+    tr:last-child td {
+      border-bottom: 0;
+    }
+
+    tbody tr:nth-child(odd) td {
+      background: #fff;
+    }
+
+    tbody tr:nth-child(even) td {
+      background: #fcf9f1;
+    }
+
+    tbody tr:hover td {
+      background: #eef6f0;
+    }
+
+    .row-actions {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .row-actions button {
+      border-radius: 8px;
+      padding: 5px 10px;
+      font-size: 0.8rem;
+      font-weight: 700;
+    }
+
+    .book-cover {
+      width: 52px;
+      height: 68px;
+      border-radius: 6px;
+      border: 1px solid var(--line);
+      object-fit: cover;
+      display: block;
+      background: #f2efe7;
+    }
+
+    .cover-empty {
+      width: 52px;
+      height: 68px;
+      border-radius: 6px;
+      border: 1px dashed var(--line);
+      display: grid;
+      place-items: center;
+      color: var(--subtle);
+      font-size: 0.8rem;
+      background: #f8f4e9;
+    }
+
+    .upload-box {
+      display: grid;
+      gap: 8px;
+    }
+
+    .upload-preview {
+      width: 96px;
+      height: 128px;
+      border-radius: 8px;
+      border: 1px solid var(--line);
+      object-fit: cover;
+      background: #f4efe3;
+      display: none;
+    }
+
+    .upload-tip {
+      margin: 0;
+      color: var(--subtle);
+      font-size: 0.84rem;
+    }
+
+    td:nth-child(1) {
+      font-weight: 700;
+      color: #344032;
+      min-width: 140px;
+    }
+
+    td:nth-child(2) {
+      min-width: 68px;
+    }
+
+    td:nth-child(3),
+    td:nth-child(4) {
+      min-width: 96px;
+    }
+
+    td:nth-child(8) {
+      min-width: 120px;
+    }
+
+    .announcement-item {
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 12px;
+      margin-bottom: 10px;
+      animation: reveal 360ms ease both;
+    }
+
+    .announcement-item h3 {
+      margin: 0 0 6px;
+    }
+
+    .announcement-meta {
+      margin: 0 0 8px;
+      color: var(--subtle);
+      font-size: 0.9rem;
+    }
+
+    .book-chip {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      padding: 2px 8px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      border: 1px solid #d8d2c0;
+      background: #f7f3e8;
+      color: #6f6547;
+    }
+
+    .book-chip.recommended {
+      border-color: #f0c462;
+      background: #fff3d6;
+      color: #8f5b13;
+    }
+
+    .rating-stars {
+      color: #e0a800;
+      letter-spacing: 1px;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .borrow-badge {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      padding: 2px 8px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      border: 1px solid transparent;
+      white-space: nowrap;
+    }
+
+    .borrow-badge.yes {
+      color: #1f6d3a;
+      background: #e8f7ec;
+      border-color: #b8e2c4;
+    }
+
+    .borrow-badge.no {
+      color: #8a3b3b;
+      background: #fdeeee;
+      border-color: #f4c5c5;
+    }
+
+    .recommended-item {
+      display: grid;
+      grid-template-columns: 1fr 72px;
+      gap: 10px;
+      background: #fff;
+      border: 1px dashed #d6cdaa;
+      border-radius: 10px;
+      padding: 10px;
+      margin-bottom: 10px;
+    }
+
+    .recommended-item h3 {
+      margin: 0;
+      font-size: 1rem;
+    }
+
+    .recommended-meta {
+      margin: 0;
+      color: var(--subtle);
+      font-size: 0.9rem;
+    }
+
+    .recommended-cover {
+      width: 72px;
+      height: 96px;
+      border-radius: 8px;
+      border: 1px solid var(--line);
+      object-fit: cover;
+      display: block;
+      background: #f3eee2;
+    }
+
+    .recommended-cover-empty {
+      width: 72px;
+      height: 96px;
+      border-radius: 8px;
+      border: 1px dashed var(--line);
+      display: grid;
+      place-items: center;
+      color: var(--subtle);
+      font-size: 0.82rem;
+      background: #f8f4e9;
+    }
+
+    .empty {
+      margin: 0;
+      color: var(--subtle);
+    }
+
+    .chart-sub {
+      background: #f6f8f4;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 12px;
+      margin-bottom: 14px;
+    }
+
+    .chart-sub h3 {
+      margin: 0 0 10px;
+      font-size: 0.78rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--subtle);
+      font-weight: 700;
+    }
+
+    .chart-sub canvas {
+      display: block;
+      width: 100% !important;
+      height: 220px !important;
+      max-height: 190px;
+    }
+
+    @keyframes reveal {
+      from {
+        opacity: 0;
+        transform: translateY(8px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @media (max-width: 900px) {
+      .wrap {
+        grid-template-columns: 1fr;
+      }
+
+      th,
+      td {
+        padding: 9px 8px;
+        font-size: 0.86rem;
+      }
+
+      .row-actions button {
+        padding: 5px 8px;
+        font-size: 0.76rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <section class="panel">
+      <h1>图书管理中心</h1>
+      <p class="subtitle" data-admin-only>借阅数据可视化总览</p>
+      <div class="utility-links">
+        <a id="link-login" href="/login.html">用户登录</a>
+        <a href="/tianxia.html">天下图书</a>
+        <a id="link-register" href="/register.html">用户注册</a>
+        <span id="auth-inline" class="auth-inline" hidden>
+          <span id="auth-user" class="auth-user"></span>
+          <button id="logout-btn" class="auth-logout" type="button">登出</button>
+        </span>
+      </div>
+
+      <div class="chart-sub" data-admin-only>
+        <h3>热门图书排行</h3>
+        <canvas id="chartBooks"></canvas>
+      </div>
+      <div class="chart-sub" data-admin-only>
+        <h3>借阅状态分布</h3>
+        <canvas id="chartStatus"></canvas>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2>快捷导航</h2>
+      <p class="subtitle">后台管理功能入口 &middot; 前台访问入口</p>
+
+      <nav class="admin-nav" aria-label="快捷导航">
+        <span class="nav-group-label" data-admin-only>后台管理</span>
+        <a class="active" href="/index.html" data-admin-only>后台首页</a>
+        <a href="/admin/books.html" data-admin-only>图书编辑</a>
+        <a href="/admin/book-upload.html" data-admin-only>图书上传</a>
+        <a href="/admin/borrows.html" data-admin-only>借阅总览</a>
+        <a href="/admin/announcements.html" data-admin-only>公告管理</a>
+        <a href="/admin/reviews.html" data-admin-only>评论总览</a>
+        <a href="/admin/users.html" data-admin-only>管理员管理</a>
+        <div class="nav-divider" data-admin-only></div>
+        <span class="nav-group-label">前台入口</span>
+        <a href="/tianxia.html">天下图书</a>
+      </nav>
+    </section>
+  </main>
+
+  <script src="/js/auth.js"></script>
+  <script>
+    const AUTH = window.Demo5Auth;
+    const authInlineEl = document.getElementById('auth-inline');
+    const authUserEl = document.getElementById('auth-user');
+    const logoutBtn = document.getElementById('logout-btn');
+    const adminOnlyEls = document.querySelectorAll('[data-admin-only]');
+
+    async function syncAuthUi() {
+      const user = await AUTH.loadCurrentUser();
+      const username = user?.username || '';
+      const loggedIn = !!username;
+      document.getElementById('link-login').hidden = loggedIn;
+      document.getElementById('link-register').hidden = loggedIn;
+      adminOnlyEls.forEach((el) => {
+        el.hidden = !AUTH.isAdmin(user);
+      });
+      if (!username) {
+        authInlineEl.hidden = true;
+        authUserEl.textContent = '';
+        return;
+      }
+      authInlineEl.hidden = false;
+      authUserEl.textContent = `当前用户：${username}${AUTH.isAdmin(user) ? '（管理员）' : ''}`;
+    }
+
+    logoutBtn.addEventListener('click', () => {
+      AUTH.clearUser();
+      syncAuthUi();
+      window.location.href = '/login.html';
+    });
+
+    syncAuthUi();
+    loadCharts();
+
+    let chartBooks = null;
+    let chartStatus = null;
+    const bookChartGradientPairs = [
+      ['#ff7a59', '#ffb347'],
+      ['#ff5f6d', '#ffc371'],
+      ['#ffd166', '#06d6a0'],
+      ['#00c6ff', '#0072ff'],
+      ['#7f5af0', '#2cb67d'],
+      ['#f857a6', '#ff5858'],
+      ['#43cea2', '#185a9d']
+    ];
+    const statusChartGradientPairs = [
+      ['#4facfe', '#00f2fe'],
+      ['#43e97b', '#38f9d7'],
+      ['#fa709a', '#fee140']
+    ];
+
+    function createLinearGradient(canvas, colors, horizontal = false) {
+      const ctx = canvas.getContext('2d');
+      const gradient = horizontal
+        ? ctx.createLinearGradient(0, 0, canvas.width || 420, 0)
+        : ctx.createLinearGradient(0, 0, 0, canvas.height || 220);
+      gradient.addColorStop(0, colors[0]);
+      gradient.addColorStop(1, colors[1]);
+      return gradient;
+    }
+
+    async function loadCharts() {
+      try {
+        const user = await AUTH.loadCurrentUser();
+        if (!AUTH.isAdmin(user)) {
+          return;
+        }
+        const res = await fetch('/api/admin/borrows', {
+          headers: AUTH.buildAuthHeaders(user)
+        });
+        if (!res.ok) return;
+        const records = await res.json();
+        if (!Array.isArray(records)) return;
+
+        // 热门图书排行
+        const bookCount = {};
+        records.forEach(r => {
+          const t = r.bookTitle || '未知';
+          bookCount[t] = (bookCount[t] || 0) + 1;
+        });
+        const sortedBooks = Object.entries(bookCount).sort((a, b) => b[1] - a[1]).slice(0, 7);
+        if (chartBooks) chartBooks.destroy();
+        const booksCanvas = document.getElementById('chartBooks');
+        const bookGradients = sortedBooks.map((_, index) => createLinearGradient(
+          booksCanvas,
+          bookChartGradientPairs[index % bookChartGradientPairs.length],
+          true
+        ));
+        chartBooks = new Chart(document.getElementById('chartBooks'), {
+          type: 'bar',
+          data: {
+            labels: sortedBooks.map(e => e[0]),
+            datasets: [{ label: '借阅次数', data: sortedBooks.map(e => e[1]),
+              backgroundColor: bookGradients,
+              hoverBackgroundColor: bookGradients,
+              borderColor: '#fffdf8', borderWidth: 1.5, borderRadius: 5, borderSkipped: false }]
+          },
+          options: {
+            indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+              x: { ticks: { stepSize: 1, font: { size: 10 } }, grid: { color: '#e5ede8' } },
+              y: { ticks: { font: { size: 11 } }, grid: { display: false } }
+            }
+          }
+        });
+
+        // 借阅状态分布
+        const sc = { BORROWED: 0, RETURNED: 0, OVERDUE: 0 };
+        records.forEach(r => { if (sc[r.status] !== undefined) sc[r.status]++; });
+        if (chartStatus) chartStatus.destroy();
+        const statusCanvas = document.getElementById('chartStatus');
+        const statusGradients = statusChartGradientPairs.map(colors => createLinearGradient(statusCanvas, colors));
+        chartStatus = new Chart(document.getElementById('chartStatus'), {
+          type: 'doughnut',
+          data: {
+            labels: ['借阅中', '已归还', '逾期'],
+            datasets: [{ data: [sc.BORROWED, sc.RETURNED, sc.OVERDUE],
+              backgroundColor: statusGradients,
+              hoverBackgroundColor: statusGradients,
+              borderWidth: 2, borderColor: '#fffdf8' }]
+          },
+          options: {
+            responsive: true, maintainAspectRatio: false, cutout: '58%',
+            plugins: { legend: { position: 'bottom', labels: { padding: 12, font: { size: 11 } } } }
+          }
+        });
+      } catch (e) { /* 加载失败不影响主页面 */ }
+    }
+  </script>
+</body>
+</html>
