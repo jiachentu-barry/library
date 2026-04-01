@@ -1,0 +1,102 @@
+﻿<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ユーザーログイン</title>
+  <link rel="stylesheet" href="/css/login.css" />
+</head>
+<body>
+  <main class="card">
+    <h1>ユーザーログイン</h1>
+    <p class="subtitle">ログイン種別を選んでください：ユーザーはホームへ、管理者は管理画面へ。</p>
+
+    <div class="links">
+      <a href="/template/tianxia.html">ホームへ戻る</a>
+      <a href="/template/register.html">登録へ</a>
+    </div>
+
+    <form id="login-form">
+      <label for="login-role">ログイン種別</label>
+      <select id="login-role" required>
+        <option value="USER" selected>ユーザーログイン</option>
+        <option value="ADMIN">管理者</option>
+      </select>
+
+      <label for="username">ユーザー名</label>
+      <input id="username" maxlength="20" placeholder="ユーザー名を入力" required />
+
+      <label for="password">パスワード</label>
+      <input id="password" type="password" minlength="6" maxlength="50" placeholder="パスワードを入力" required />
+
+      <button id="submit-btn" type="submit">ログイン</button>
+      <p id="status" class="status"></p>
+    </form>
+  </main>
+
+  <script src="/js/auth.js"></script>
+  <script>
+    const AUTH = window.Demo5Auth;
+    const form = document.getElementById('login-form');
+    const loginRoleInput = document.getElementById('login-role');
+    const usernameInput = document.getElementById('username');
+    const passwordInput = document.getElementById('password');
+    const statusEl = document.getElementById('status');
+    const submitBtn = document.getElementById('submit-btn');
+
+    const existingUser = AUTH.getStoredUser();
+    if (existingUser?.username) {
+      // 用户已登录，500ms 后跳转
+      setTimeout(() => {
+        window.location.href = AUTH.isAdmin(existingUser) ? '/template/index.html' : '/template/tianxia.html';
+      }, 500);
+    }
+
+    function setStatus(message, mode) {
+      statusEl.textContent = message || '';
+      statusEl.className = mode ? `status ${mode}` : 'status';
+    }
+
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+
+      const username = usernameInput.value.trim();
+      const password = passwordInput.value;
+      const loginRole = loginRoleInput.value === 'ADMIN' ? 'ADMIN' : 'USER';
+      if (!username || !password) {
+        setStatus('ユーザー名とパスワードを入力してください', 'error');
+        return;
+      }
+
+      submitBtn.disabled = true;
+      setStatus('ログイン中...', '');
+
+      try {
+        const res = await fetch('/api/users/login', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ username, password, loginRole })
+        });
+
+        const body = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          throw new Error(body.message || 'ログイン失敗');
+        }
+
+        const user = body.user || { username, role: 'USER' };
+        AUTH.saveUser(user);
+        setStatus(body.message || 'ログイン成功。移動中...', 'ok');
+        setTimeout(() => {
+          window.location.href = loginRole === 'ADMIN' ? '/template/index.html' : '/template/tianxia.html';
+        }, 400);
+      } catch (error) {
+        setStatus(error.message || 'ログイン失敗', 'error');
+      } finally {
+        submitBtn.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>

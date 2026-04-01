@@ -1,0 +1,267 @@
+﻿<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>管理画面 - お知らせ投稿</title>
+  <link rel="stylesheet" href="/css/admin/announcements.css" />
+</head>
+<body>
+  <div class="container">
+    <section class="card">
+      <h1>お知らせ投稿</h1>
+      <p class="subtitle">システムお知らせの作成・編集・公開</p>
+      <nav class="admin-nav" aria-label="管理ナビ">
+        <a href="/template/index.html">管理ホーム</a>
+        <a href="/template/admin/books.html">書籍編集</a>
+        <a href="/template/admin/book-upload.html">書籍追加</a>
+        <a href="/template/admin/borrows.html">貸出一覧</a>
+        <a class="active" href="/template/admin/announcements.html">お知らせ管理</a>
+        <a href="/template/admin/reviews.html">レビュー一覧</a>
+        <a href="/template/admin/users.html">ユーザー管理</a>
+      </nav>
+
+      <form id="publish-form">
+        <div class="form-row">
+          <div>
+            <label for="title">タイトル</label>
+            <input id="title" name="title" maxlength="120" placeholder="タイトルを入力" required />
+          </div>
+          <div>
+            <label for="statusSelect">状態</label>
+            <select id="statusSelect" name="status">
+              <option value="PUBLISHED">公開済み</option>
+              <option value="DRAFT">下書き</option>
+            </select>
+          </div>
+        </div>
+
+        <label for="content">内容</label>
+        <textarea id="content" name="content" maxlength="4000" placeholder="内容を入力（最大4000文字）" required></textarea>
+
+        <div class="actions">
+          <button id="submitBtn" type="submit">お知らせを投稿</button>
+          <button id="cancelEditBtn" class="secondary" type="button" hidden>編集をキャンセル</button>
+          <p id="status" class="status"></p>
+        </div>
+      </form>
+    </section>
+
+    <section class="card">
+      <h2>公開済みお知らせ</h2>
+      <div id="announcement-list"></div>
+    </section>
+  </div>
+
+  <script src="/js/auth.js"></script>
+  <script>
+    const AUTH = window.Demo5Auth;
+    const adminHeaders = () => AUTH.buildAuthHeaders(AUTH.getStoredUser());
+    AUTH.requireAdminPage();
+
+    const form = document.getElementById('publish-form');
+    const titleInput = document.getElementById('title');
+    const contentInput = document.getElementById('content');
+    const statusInput = document.getElementById('statusSelect');
+    const statusEl = document.getElementById('status');
+    const submitBtn = document.getElementById('submitBtn');
+    const cancelEditBtn = document.getElementById('cancelEditBtn');
+    const listEl = document.getElementById('announcement-list');
+    let editingId = null;
+    let allItems = [];
+
+    function escapeHtml(text) {
+      return String(text || '')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;');
+    }
+
+    function statusLabel(status) {
+      return status === 'DRAFT' ? '下書き' : '公開済み';
+    }
+
+    function statusClass(status) {
+      return status === 'DRAFT' ? 'draft' : 'published';
+    }
+
+    function formatTime(value) {
+      if (!value) {
+        return '-';
+      }
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) {
+        return value;
+      }
+      return date.toLocaleString();
+    }
+
+    function renderList(items) {
+      listEl.innerHTML = '';
+      if (!items.length) {
+        listEl.innerHTML = '<p class="empty">お知らせなし</p>';
+        return;
+      }
+
+      items.forEach((item) => {
+        const box = document.createElement('article');
+        box.className = 'announcement-item';
+        box.innerHTML = `
+          <div class="announcement-toolbar">
+            <h3>${escapeHtml(item.title)}</h3>
+            <span class="status-badge ${statusClass(item.status)}">${statusLabel(item.status)}</span>
+          </div>
+          <div class="announcement-meta">
+            <span>公開日時：${formatTime(item.publishedAt)}</span>
+          </div>
+          <div class="announcement-content">${escapeHtml(item.content)}</div>
+          <div class="item-actions">
+            <button class="edit-btn" type="button" data-id="${item.id}">編集</button>
+            <button class="delete-btn" type="button" data-id="${item.id}">削除</button>
+          </div>
+        `;
+        listEl.appendChild(box);
+      });
+    }
+
+    async function loadAnnouncements() {
+      try {
+        const res = await fetch('/api/admin/announcements', {
+          headers: adminHeaders()
+        });
+        const data = await res.json();
+        allItems = Array.isArray(data) ? data : [];
+        renderList(allItems);
+      } catch (error) {
+        listEl.innerHTML = '<p class="empty">読み込みに失敗しました。後でリロードしてください。</p>';
+      }
+    }
+
+    function resetFormMode() {
+      editingId = null;
+      submitBtn.textContent = 'お知らせを投稿';
+      cancelEditBtn.hidden = true;
+      form.reset();
+      statusInput.value = 'PUBLISHED';
+    }
+
+    function startEdit(item) {
+      editingId = item.id;
+      titleInput.value = item.title || '';
+      contentInput.value = item.content || '';
+      statusInput.value = item.status || 'PUBLISHED';
+      submitBtn.textContent = '変更を保存';
+      cancelEditBtn.hidden = false;
+      statusEl.textContent = `編集中：${item.title || ''}`;
+      statusEl.className = 'status';
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      statusEl.textContent = '';
+      statusEl.className = 'status';
+
+      const payload = {
+        title: titleInput.value,
+        content: contentInput.value,
+        status: statusInput.value
+      };
+
+      try {
+        const url = editingId ? `/api/admin/announcements/${editingId}` : '/api/admin/announcements';
+        const method = editingId ? 'PUT' : 'POST';
+        const res = await fetch(url, {
+          method,
+          headers: {
+            'Content-Type': 'application/json',
+            ...adminHeaders()
+          },
+          body: JSON.stringify(payload)
+        });
+
+        if (!res.ok) {
+          const errorBody = await res.json().catch(() => ({}));
+          throw new Error(errorBody.message || (editingId ? '更新失敗' : '投稿失敗'));
+        }
+
+        statusEl.textContent = editingId ? '変更成功' : '投稿成功';
+        statusEl.classList.add('ok');
+        resetFormMode();
+        await loadAnnouncements();
+      } catch (error) {
+        statusEl.textContent = error.message || (editingId ? '更新失敗' : '投稿失敗');
+        statusEl.classList.add('error');
+      }
+    });
+
+    cancelEditBtn.addEventListener('click', () => {
+      statusEl.textContent = '編集をキャンセルしました';
+      statusEl.className = 'status';
+      resetFormMode();
+    });
+
+    listEl.addEventListener('click', (event) => {
+      const target = event.target;
+      if (!(target instanceof HTMLElement)) {
+        return;
+      }
+
+      const editBtn = target.closest('.edit-btn');
+      if (editBtn) {
+        const itemId = Number(editBtn.dataset.id);
+        if (!itemId) {
+          return;
+        }
+        const item = allItems.find((entry) => entry.id === itemId);
+        if (!item) {
+          return;
+        }
+        startEdit(item);
+        return;
+      }
+
+      const deleteBtn = target.closest('.delete-btn');
+      if (deleteBtn) {
+        const itemId = Number(deleteBtn.dataset.id);
+        if (!itemId) {
+          return;
+        }
+        const item = allItems.find((entry) => entry.id === itemId);
+        if (!item) {
+          return;
+        }
+        if (confirm(`お知らせ「${item.title}」を削除しますか？`)) {
+          deleteAnnouncement(itemId);
+        }
+      }
+    });
+
+    async function deleteAnnouncement(id) {
+      try {
+        const res = await fetch(`/api/admin/announcements/${id}`, {
+          method: 'DELETE',
+          headers: adminHeaders()
+        });
+
+        if (!res.ok) {
+          const errorBody = await res.json().catch(() => ({}));
+          throw new Error(errorBody.message || '削除失敗');
+        }
+
+        statusEl.textContent = '削除成功';
+        statusEl.className = 'status ok';
+        await loadAnnouncements();
+      } catch (error) {
+        statusEl.textContent = error.message || '削除失敗';
+        statusEl.className = 'status error';
+      }
+    }
+
+    statusInput.value = 'PUBLISHED';
+    loadAnnouncements();
+  </script>
+</body>
+</html>

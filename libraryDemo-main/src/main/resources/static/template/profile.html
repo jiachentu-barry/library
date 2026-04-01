@@ -1,0 +1,169 @@
+﻿<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>私の貸出</title>
+  <link rel="stylesheet" href="/css/profile.css" />
+</head>
+<body>
+  <header class="site-header">
+    <div class="site-header-inner">
+      <div>
+        <h1 class="site-title">私の貸出</h1>
+        <p class="site-title-sub">現在の貸出と履歴を確認</p>
+      </div>
+      <nav class="site-nav">
+        <a href="/template/tianxia.html">書籍一覧</a>
+        <a id="nav-login" href="/template/login.html">ユーザーログイン</a>
+        <a id="nav-register" href="/template/register.html">ユーザー登録</a>
+        <span id="nav-user" class="nav-user" hidden></span>
+        <button id="nav-logout" class="nav-logout" type="button" hidden>ログアウト</button>
+      </nav>
+    </div>
+  </header>
+
+  <div class="wrap">
+    <!-- Active borrows -->
+    <div class="panel">
+      <h2 class="section-title">現在の貸出</h2>
+      <div id="active-borrows"></div>
+    </div>
+
+    <!-- History -->
+    <div class="panel">
+      <h2 class="section-title">貸出履歴</h2>
+      <div id="history-borrows"></div>
+    </div>
+  </div>
+
+  <script src="/js/auth.js"></script>
+  <script>
+    const AUTH = window.Demo5Auth;
+    const navUserEl = document.getElementById('nav-user');
+    const navLogoutEl = document.getElementById('nav-logout');
+    const activeEl = document.getElementById('active-borrows');
+    const historyEl = document.getElementById('history-borrows');
+
+    function escapeHtml(text) {
+      return String(text || '')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;');
+    }
+
+    function formatDateTime(value) {
+      if (!value) return '-';
+      const d = new Date(value);
+      return Number.isNaN(d.getTime()) ? value : d.toLocaleString('zh-CN', { hour12: false });
+    }
+
+    async function syncAuthUi() {
+      const user = await AUTH.loadCurrentUser();
+      const username = user?.username || '';
+      const loggedIn = !!username;
+      document.getElementById('nav-login').hidden = loggedIn;
+      document.getElementById('nav-register').hidden = loggedIn;
+      if (!loggedIn) { navUserEl.hidden = true; navLogoutEl.hidden = true; return; }
+      navUserEl.hidden = false;
+      navLogoutEl.hidden = false;
+      navUserEl.textContent = `ログイン中：${username}${AUTH.isAdmin(user) ? '（管理者）' : ''}`;
+    }
+
+    function statusBadge(status) {
+      const labels = { BORROWED: '貸出中', RETURNED: '返却済み', OVERDUE: '延滞' };
+      return `<span class="status-badge ${escapeHtml(status)}">${labels[status] || escapeHtml(status)}</span>`;
+    }
+
+    function buildTable(records, showReturnBtn) {
+      if (!records.length) return '<p class="empty">記録なし</p>';
+
+      const rows = records.map((r) => {
+        const returnBtnHtml = (showReturnBtn && r.status !== 'RETURNED')
+          ? `<button class="return-btn" data-borrow-id="${r.id}" data-book-id="${r.bookId}">返却</button>`
+          : '';
+        return `
+          <tr>
+            <td>${escapeHtml(r.bookTitle)}</td>
+            <td>${escapeHtml(r.bookAuthor)}</td>
+            <td>${formatDateTime(r.borrowedAt)}</td>
+            <td>${formatDateTime(r.dueDate)}</td>
+            <td>${r.returnedAt ? formatDateTime(r.returnedAt) : '-'}</td>
+            <td>${statusBadge(r.status)}</td>
+            <td>${returnBtnHtml}</td>
+          </tr>`;
+      }).join('');
+
+      return `
+        <table class="borrow-table">
+          <thead>
+            <tr>
+              <th>書名</th><th>著者</th><th>貸出日時</th><th>返却期限</th><th>返却日時</th><th>状態</th><th>操作</th>
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>`;
+    }
+
+    async function loadBorrows() {
+      const username = AUTH.getStoredUsername();
+      if (!username) {
+        activeEl.innerHTML = '<p class="empty">貸出記録を確認するには<a href="/template/login.html">ログイン</a>してください</p>';
+        historyEl.innerHTML = '';
+        return;
+      }
+
+      try {
+        const res = await fetch(`/api/users/${encodeURIComponent(username)}/borrows`);
+        if (!res.ok) throw new Error('読み込み失敗');
+        const data = await res.json();
+        const all = Array.isArray(data) ? data : [];
+
+        const active = all.filter((r) => r.status === 'BORROWED' || r.status === 'OVERDUE');
+        const history = all.filter((r) => r.status === 'RETURNED');
+
+        activeEl.innerHTML = buildTable(active, true);
+        historyEl.innerHTML = buildTable(history, false);
+      } catch (e) {
+        activeEl.innerHTML = '<p class="empty">読み込みに失敗しました。後でお試しください</p>';
+        historyEl.innerHTML = '';
+      }
+    }
+
+    // Return book handler (event delegation)
+    document.addEventListener('click', async (e) => {
+      const btn = e.target.closest('.return-btn');
+      if (!btn) return;
+      const username = AUTH.getStoredUsername();
+      const borrowId = btn.dataset.borrowId;
+      if (!username || !borrowId) return;
+
+      btn.disabled = true;
+      try {
+        const res = await fetch(`/api/borrow/${borrowId}/return`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username })
+        });
+        const data = await res.json();
+        if (!res.ok) { alert(data.message || '返却失敗'); btn.disabled = false; return; }
+        await loadBorrows();
+      } catch (err) {
+        alert('リクエスト失敗。後でお試しください');
+        btn.disabled = false;
+      }
+    });
+
+    navLogoutEl.addEventListener('click', () => {
+      AUTH.clearUser();
+      syncAuthUi();
+      window.location.href = '/login.html';
+    });
+
+    syncAuthUi();
+    loadBorrows();
+  </script>
+</body>
+</html>

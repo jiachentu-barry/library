@@ -13,6 +13,7 @@ import com.example.demo5.repository.BookRepository;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.dao.DataAccessException;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -88,8 +89,13 @@ public class BookController {
         book.setStatus(status);
         book.setCreatedAt(LocalDateTime.now());
 
-        Book saved = bookRepository.save(book);
-        return ResponseEntity.status(HttpStatus.CREATED).body(saved);
+        try {
+            Book saved = bookRepository.save(book);
+            return ResponseEntity.status(HttpStatus.CREATED).body(saved);
+        } catch (DataAccessException ex) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ApiMessage("保存图书失败：数据库写入异常，请检查图片或字段长度"));
+        }
     }
 
     @PutMapping("/books/{id}")
@@ -126,8 +132,13 @@ public class BookController {
         book.setImage(image);
         book.setStatus(status);
 
-        Book saved = bookRepository.save(book);
-        return ResponseEntity.ok(saved);
+        try {
+            Book saved = bookRepository.save(book);
+            return ResponseEntity.ok(saved);
+        } catch (DataAccessException ex) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ApiMessage("更新图书失败：数据库写入异常，请检查图片或字段长度"));
+        }
     }
 
     @DeleteMapping("/books/{id}")

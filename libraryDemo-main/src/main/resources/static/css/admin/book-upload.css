@@ -1,0 +1,173 @@
+﻿:root {
+      --bg-1: #f6f2e7;
+      --bg-2: #e8f1e5;
+      --paper: #fffdf8;
+      --ink: #2a2f24;
+      --subtle: #6d7461;
+      --line: #d8d2c0;
+      --accent: #2f6d4f;
+      --accent-2: #1f5039;
+      --danger: #bb3f3f;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      color: var(--ink);
+      font-family: "Noto Serif SC", "Microsoft YaHei", serif;
+      background:
+        radial-gradient(circle at 12% 8%, #f1e2c8 0 20%, transparent 21%),
+        radial-gradient(circle at 88% 14%, #cfe4d5 0 24%, transparent 25%),
+        linear-gradient(140deg, var(--bg-1), var(--bg-2));
+      min-height: 100vh;
+    }
+
+    .wrap {
+      width: min(980px, 94vw);
+      margin: 30px auto;
+    }
+
+    .panel {
+      background: color-mix(in srgb, var(--paper) 90%, white 10%);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 18px;
+      box-shadow: 0 12px 30px rgba(42, 47, 36, 0.08);
+    }
+
+    h1 {
+      margin: 0 0 10px;
+      letter-spacing: 0.02em;
+    }
+
+    .subtitle {
+      margin: 0 0 14px;
+      color: var(--subtle);
+    }
+
+    .admin-nav {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+
+    .admin-nav a {
+      color: #415041;
+      text-decoration: none;
+      font-weight: 700;
+      padding: 8px 14px;
+      border: 1px solid #d3ddce;
+      border-radius: 999px;
+      background: #f3f8f0;
+      transition: border-color 180ms, color 180ms, background 180ms;
+    }
+
+    .admin-nav a:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: #ecf5ef;
+    }
+
+    .admin-nav a.active {
+      border-color: var(--accent);
+      color: #fff;
+      background: var(--accent);
+    }
+
+    .book-form {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    label {
+      display: block;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+
+    input,
+    select,
+    button {
+      font: inherit;
+    }
+
+    input,
+    select {
+      width: 100%;
+      border-radius: 10px;
+      border: 1px solid var(--line);
+      padding: 9px 10px;
+      background: #fff;
+      color: var(--ink);
+    }
+
+    .upload-box {
+      display: grid;
+      gap: 8px;
+    }
+
+    .upload-preview {
+      width: 96px;
+      height: 128px;
+      border-radius: 8px;
+      border: 1px solid var(--line);
+      object-fit: cover;
+      background: #f4efe3;
+      display: none;
+    }
+
+    .upload-tip {
+      margin: 0;
+      color: var(--subtle);
+      font-size: 0.84rem;
+    }
+
+    .actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    button {
+      border: 0;
+      border-radius: 999px;
+      padding: 9px 16px;
+      background: var(--accent);
+      color: #fff;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: var(--accent-2);
+    }
+
+    button.secondary {
+      background: #7d8674;
+    }
+
+    button.secondary:hover {
+      background: #656d5c;
+    }
+
+    .status {
+      margin: 0;
+      font-weight: 700;
+      color: var(--subtle);
+    }
+
+    .status.error {
+      color: var(--danger);
+    }
+
+    @media (max-width: 900px) {
+      .book-form {
+        grid-template-columns: 1fr;
+      }
+    }

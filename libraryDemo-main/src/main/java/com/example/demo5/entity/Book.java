@@ -37,7 +37,7 @@ public class Book {
     @Column
     private Integer recommendationIndex;
 
-    @Column(columnDefinition = "LONGTEXT")
+    @Column(columnDefinition = "TEXT")
     private String image;
 
     @Enumerated(EnumType.STRING)

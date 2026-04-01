@@ -1,0 +1,222 @@
+﻿:root {
+      --bg: #f6f8fc;
+      --card: #ffffff;
+      --text: #1f2a44;
+      --muted: #6f7b94;
+      --line: #dbe2f0;
+      --primary: #1a73e8;
+      --primary-dark: #155dc0;
+      --danger: #c53b3b;
+      --ok: #1f8a4c;
+      --warn: #9a6a1a;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Microsoft YaHei", sans-serif;
+      background: linear-gradient(140deg, #eff4ff, var(--bg));
+      color: var(--text);
+    }
+
+    .container {
+      width: min(1120px, 94vw);
+      margin: 36px auto;
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 18px;
+      margin-bottom: 14px;
+    }
+
+    h1 {
+      margin: 0 0 10px;
+      font-size: 1.5rem;
+    }
+
+    .admin-nav {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+    }
+
+    .admin-nav a {
+      color: #2f4b7a;
+      text-decoration: none;
+      font-weight: 700;
+      padding: 7px 14px;
+      border: 1px solid #cdd9ef;
+      border-radius: 999px;
+      background: #f1f6ff;
+      transition: border-color 180ms, color 180ms, background 180ms;
+    }
+
+    .admin-nav a:hover {
+      color: var(--primary);
+      border-color: var(--primary);
+      background: #e9f1ff;
+    }
+
+    .admin-nav a.active {
+      color: #fff;
+      border-color: var(--primary);
+      background: var(--primary);
+    }
+
+    .toolbar {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-bottom: 12px;
+    }
+
+    .toolbar input,
+    .toolbar select {
+      font: inherit;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 8px 10px;
+      min-width: 180px;
+      color: var(--text);
+      background: #fff;
+    }
+
+    .toolbar button {
+      border: 0;
+      border-radius: 999px;
+      padding: 8px 14px;
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+      color: #fff;
+      background: var(--primary);
+    }
+
+    .toolbar button:hover {
+      background: var(--primary-dark);
+    }
+
+    .status {
+      margin: 0;
+      min-height: 1.4em;
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: var(--muted);
+    }
+
+    .status.ok {
+      color: var(--ok);
+    }
+
+    .status.error {
+      color: var(--danger);
+    }
+
+    .responsive-wrap {
+      overflow-x: auto;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 860px;
+    }
+
+    thead th {
+      text-align: left;
+      padding: 10px 12px;
+      color: var(--muted);
+      font-size: 0.82rem;
+      border-bottom: 1px solid var(--line);
+      white-space: nowrap;
+    }
+
+    tbody td {
+      padding: 11px 12px;
+      border-bottom: 1px solid var(--line);
+      vertical-align: middle;
+      font-size: 0.9rem;
+    }
+
+    tbody tr:hover td {
+      background: #f7faff;
+    }
+
+    .role-tag {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      padding: 3px 9px;
+      font-size: 0.78rem;
+      font-weight: 700;
+      border: 1px solid transparent;
+    }
+
+    .role-tag.ADMIN {
+      background: #e7f1ff;
+      border-color: #c7ddff;
+      color: #245fb7;
+    }
+
+    .role-tag.USER {
+      background: #f6f8fc;
+      border-color: #dde4f2;
+      color: #596580;
+    }
+
+    .role-editor {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .role-editor select {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 6px 8px;
+      font: inherit;
+      font-size: 0.88rem;
+      color: var(--text);
+      background: #fff;
+    }
+
+    .role-editor button {
+      border: 0;
+      border-radius: 999px;
+      padding: 6px 12px;
+      font: inherit;
+      font-size: 0.84rem;
+      font-weight: 700;
+      cursor: pointer;
+      color: #fff;
+      background: var(--primary);
+    }
+
+    .role-editor button:hover {
+      background: var(--primary-dark);
+    }
+
+    .role-editor button:disabled {
+      cursor: not-allowed;
+      background: #9fb7db;
+    }
+
+    .empty {
+      margin: 0;
+      color: var(--muted);
+      padding: 14px;
+      text-align: center;
+      border: 1px dashed var(--line);
+      border-radius: 10px;
+      background: #fbfdff;
+    }

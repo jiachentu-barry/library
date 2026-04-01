@@ -1,0 +1,95 @@
+﻿<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ユーザー登録</title>
+  <link rel="stylesheet" href="/css/register.css" />
+</head>
+<body>
+  <main class="card">
+    <h1>ユーザー登録</h1>
+    <p class="subtitle">図書システム用のアカウントを新規作成します。</p>
+
+    <div class="links">
+      <a href="/">ホームへ戻る</a>
+      <a href="/template/login.html">ログインへ</a>
+      <a href="/template/tianxia.html">世界の本</a>
+    </div>
+
+    <form id="register-form">
+      <label for="username">ユーザー名</label>
+      <input id="username" maxlength="20" placeholder="3〜20文字（英数字またはアンダースコア）" required />
+
+      <label for="password">パスワード</label>
+      <input id="password" type="password" minlength="6" maxlength="50" placeholder="6文字以上" required />
+
+      <label for="confirm-password">パスワード確認</label>
+      <input id="confirm-password" type="password" minlength="6" maxlength="50" placeholder="パスワードを再入力" required />
+
+      <button id="submit-btn" type="submit">登録</button>
+      <p id="status" class="status"></p>
+    </form>
+  </main>
+
+  <script>
+    const form = document.getElementById('register-form');
+    const usernameInput = document.getElementById('username');
+    const passwordInput = document.getElementById('password');
+    const confirmPasswordInput = document.getElementById('confirm-password');
+    const statusEl = document.getElementById('status');
+    const submitBtn = document.getElementById('submit-btn');
+
+    function setStatus(message, mode) {
+      statusEl.textContent = message || '';
+      statusEl.className = mode ? `status ${mode}` : 'status';
+    }
+
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+
+      const username = usernameInput.value.trim();
+      const password = passwordInput.value;
+      const confirmPassword = confirmPasswordInput.value;
+
+      if (!/^[a-zA-Z0-9_]{3,20}$/.test(username)) {
+        setStatus('ユーザー名は3〜20文字（英数字またはアンダースコア）にしてください', 'error');
+        return;
+      }
+      if (password.length < 6 || password.length > 50) {
+        setStatus('パスワードは6〜50文字にしてください', 'error');
+        return;
+      }
+      if (password !== confirmPassword) {
+        setStatus('パスワードが一致しません', 'error');
+        return;
+      }
+
+      submitBtn.disabled = true;
+      setStatus('登録中...', '');
+
+      try {
+        const res = await fetch('/api/users/register', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ username, password })
+        });
+
+        const body = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          throw new Error(body.message || '登録失敗');
+        }
+
+        setStatus(body.message || '登録成功', 'ok');
+        form.reset();
+      } catch (error) {
+        setStatus(error.message || '登録失敗', 'error');
+      } finally {
+        submitBtn.disabled = false;
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,249 @@
+﻿<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>管理画面 - 貸出一覧</title>
+  <link rel="stylesheet" href="/css/admin/borrows.css" />
+</head>
+<body>
+  <div class="container">
+    <section class="card">
+      <h1>貸出一覧</h1>
+      <p class="subtitle">貸出・返却記録を管理</p>
+      <nav class="admin-nav" aria-label="管理ナビ">
+        <a href="/template/index.html">管理ホーム</a>
+        <a href="/template/admin/books.html">書籍編集</a>
+        <a href="/template/admin/book-upload.html">書籍追加</a>
+        <a class="active" href="/template/admin/borrows.html">貸出一覧</a>
+        <a href="/template/admin/announcements.html">お知らせ管理</a>
+        <a href="/template/admin/reviews.html">レビュー一覧</a>
+        <a href="/template/admin/users.html">ユーザー管理</a>
+      </nav>
+
+      <div class="stats">
+        <div class="stat-box">
+          <div class="stat-label">貸出中</div>
+          <p class="stat-value" id="stat-borrowed">0</p>
+        </div>
+        <div class="stat-box">
+          <div class="stat-label">延滞</div>
+          <p class="stat-value" id="stat-overdue">0</p>
+        </div>
+        <div class="stat-box">
+          <div class="stat-label">返却済み</div>
+          <p class="stat-value" id="stat-returned">0</p>
+        </div>
+        <div class="stat-box">
+          <div class="stat-label">すべて</div>
+          <p class="stat-value" id="stat-total">0</p>
+        </div>
+      </div>
+
+      <div class="toolbar">
+        <input id="keyword" type="search" placeholder="ユーザー名・書名・著者を検索" />
+        <select id="statusFilter">
+          <option value="ALL">すべての状態</option>
+          <option value="BORROWED">貸出中</option>
+          <option value="OVERDUE">延滞</option>
+          <option value="RETURNED">返却済み</option>
+        </select>
+        <button id="refreshBtn" type="button">更新</button>
+        <p id="status" class="status"></p>
+      </div>
+
+      <div class="table-wrap">
+        <div class="responsive-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>ユーザー名</th>
+                <th>書名</th>
+                <th>著者</th>
+                <th>貸出日時</th>
+                <th>返却期限</th>
+                <th>返却日時</th>
+                <th>状態</th>
+                <th>操作</th>
+              </tr>
+            </thead>
+            <tbody id="recordList"></tbody>
+          </table>
+        </div>
+      </div>
+      <p id="empty" class="empty" hidden>貸出記録なし</p>
+    </section>
+  </div>
+
+  <script src="/js/auth.js"></script>
+  <script>
+    const AUTH = window.Demo5Auth;
+    const adminHeaders = () => AUTH.buildAuthHeaders(AUTH.getStoredUser());
+    AUTH.requireAdminPage();
+
+    const keywordEl = document.getElementById('keyword');
+    const statusFilterEl = document.getElementById('statusFilter');
+    const refreshBtn = document.getElementById('refreshBtn');
+    const statusEl = document.getElementById('status');
+    const recordListEl = document.getElementById('recordList');
+    const emptyEl = document.getElementById('empty');
+
+    const statBorrowedEl = document.getElementById('stat-borrowed');
+    const statOverdueEl = document.getElementById('stat-overdue');
+    const statReturnedEl = document.getElementById('stat-returned');
+    const statTotalEl = document.getElementById('stat-total');
+
+    let records = [];
+
+    function updateStats() {
+      const borrowed = records.filter(r => r.status === 'BORROWED').length;
+      const overdue = records.filter(r => r.status === 'OVERDUE').length;
+      const returned = records.filter(r => r.status === 'RETURNED').length;
+      const total = records.length;
+
+      statBorrowedEl.textContent = borrowed;
+      statOverdueEl.textContent = overdue;
+      statReturnedEl.textContent = returned;
+      statTotalEl.textContent = total;
+    }
+
+    function setStatus(message, isError) {
+      statusEl.textContent = message || '';
+      statusEl.className = isError ? 'status error' : 'status ok';
+    }
+
+    function escapeHtml(text) {
+      return String(text || '')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;');
+    }
+
+    function formatTime(value) {
+      if (!value) {
+        return '-';
+      }
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) {
+        return value;
+      }
+      return date.toLocaleString('zh-CN', { hour12: false });
+    }
+
+    function statusLabel(status) {
+      if (status === 'BORROWED') return '貸出中';
+      if (status === 'RETURNED') return '返却済み';
+      if (status === 'OVERDUE') return '延滞';
+      return status;
+    }
+
+    function statusClass(status) {
+      if (status === 'BORROWED') return 'borrowed';
+      if (status === 'RETURNED') return 'returned';
+      if (status === 'OVERDUE') return 'overdue';
+      return '';
+    }
+
+    function filteredRecords() {
+      const keyword = keywordEl.value.trim().toLowerCase();
+      const statusFilter = statusFilterEl.value;
+      return records.filter((item) => {
+        if (statusFilter !== 'ALL' && item.status !== statusFilter) {
+          return false;
+        }
+        if (!keyword) {
+          return true;
+        }
+        const username = String(item.username || '').toLowerCase();
+        const title = String(item.bookTitle || '').toLowerCase();
+        const author = String(item.bookAuthor || '').toLowerCase();
+        return username.includes(keyword) || title.includes(keyword) || author.includes(keyword);
+      });
+    }
+
+    function render() {
+      const list = filteredRecords();
+      recordListEl.innerHTML = '';
+      emptyEl.hidden = list.length !== 0;
+
+      list.forEach((item) => {
+        const tr = document.createElement('tr');
+        const canForceReturn = item.status === 'BORROWED' || item.status === 'OVERDUE';
+        tr.innerHTML = `
+          <td>${item.id}</td>
+          <td>${escapeHtml(item.username)}</td>
+          <td>${escapeHtml(item.bookTitle)}</td>
+          <td>${escapeHtml(item.bookAuthor)}</td>
+          <td>${formatTime(item.borrowedAt)}</td>
+          <td>${formatTime(item.dueDate)}</td>
+          <td>${formatTime(item.returnedAt)}</td>
+          <td><span class="status-badge ${statusClass(item.status)}">${statusLabel(item.status)}</span></td>
+          <td>
+            ${canForceReturn ? `<button class="btn-return" data-id="${item.id}">強制返却</button>` : '—'}
+          </td>
+        `;
+        recordListEl.appendChild(tr);
+      });
+    }
+
+    async function loadRecords() {
+      try {
+        const res = await fetch('/api/admin/borrows', {
+          headers: adminHeaders()
+        });
+        if (!res.ok) {
+          throw new Error('貸出記録の読み込みに失敗しました');
+        }
+        const data = await res.json();
+        records = Array.isArray(data) ? data : [];
+        updateStats();
+        render();
+        setStatus(`合計 ${records.length} 件`, false);
+      } catch (error) {
+        records = [];
+        updateStats();
+        render();
+        setStatus('読み込みに失敗しました。後でお試しください', true);
+      }
+    }
+
+    recordListEl.addEventListener('click', async (event) => {
+      const button = event.target.closest('.btn-return');
+      if (!button) {
+        return;
+      }
+      const id = button.getAttribute('data-id');
+      if (!id) {
+        return;
+      }
+      button.disabled = true;
+      try {
+        const res = await fetch(`/api/admin/borrow/${id}/return`, {
+          method: 'POST',
+          headers: adminHeaders()
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          setStatus(data.message || '操作失敗', true);
+          button.disabled = false;
+          return;
+        }
+        setStatus(data.message || '返却成功', false);
+        await loadRecords();
+      } catch (error) {
+        setStatus('リクエスト失敗。後でお試しください', true);
+        button.disabled = false;
+      }
+    });
+
+    keywordEl.addEventListener('input', render);
+    statusFilterEl.addEventListener('change', render);
+    refreshBtn.addEventListener('click', loadRecords);
+
+    loadRecords();
+  </script>
+</body>
+</html>

@@ -1,0 +1,257 @@
+﻿<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>管理画面 - 書籍編集</title>
+  <link rel="stylesheet" href="/css/admin/books.css" />
+</head>
+<body>
+  <main class="wrap">
+    <section class="panel">
+      <h1>書籍編集</h1>
+      <p class="subtitle">書籍の確認・ページ管理・削除。書籍情報の編集も可能。</p>
+
+      <nav class="admin-nav" aria-label="管理ナビ">
+        <a href="/template/index.html">管理ホーム</a>
+        <a class="active" href="/template/admin/books.html">書籍編集</a>
+        <a href="/template/admin/book-upload.html">書籍追加</a>
+        <a href="/template/admin/borrows.html">貸出一覧</a>
+        <a href="/template/admin/announcements.html">お知らせ管理</a>
+        <a href="/template/admin/reviews.html">レビュー一覧</a>
+        <a href="/template/admin/users.html">ユーザー管理</a>
+      </nav>
+
+      <div class="actions">
+        <a class="button-link" href="/template/admin/book-upload.html">書籍を追加</a>
+        <p id="book-status" class="status"></p>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>書名</th>
+              <th>画像</th>
+              <th>著者</th>
+              <th>分類</th>
+              <th>在庫数</th>
+              <th>貸出可能</th>
+              <th>おすすめ度</th>
+              <th>操作</th>
+            </tr>
+          </thead>
+          <tbody id="book-list"></tbody>
+        </table>
+        <div id="book-pagination" class="table-pagination" hidden></div>
+      </div>
+    </section>
+  </main>
+
+  <script src="/js/auth.js"></script>
+  <script>
+    const AUTH = window.Demo5Auth;
+    const adminHeaders = () => AUTH.buildAuthHeaders(AUTH.getStoredUser());
+    AUTH.requireAdminPage();
+
+    const bookStatusEl = document.getElementById('book-status');
+    const bookListEl = document.getElementById('book-list');
+    const bookPaginationEl = document.getElementById('book-pagination');
+
+    const BOOKS_PER_PAGE = 4;
+    let books = [];
+    let currentBookPage = 1;
+
+    function escapeHtml(text) {
+      return String(text || '')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;');
+    }
+
+    function setBookStatus(message, isError) {
+      bookStatusEl.textContent = message || '';
+      bookStatusEl.className = isError ? 'status error' : 'status';
+    }
+
+    function formatInt(value) {
+      const numeric = Number(value);
+      if (!Number.isFinite(numeric)) {
+        return '0';
+      }
+      return String(Math.max(0, Math.round(numeric)));
+    }
+
+    function starText(value) {
+      const score = Math.min(5, Math.max(1, Math.round(Number(value) || 1)));
+      return `<span class="rating-stars" aria-label="${score}星">${'★'.repeat(score)}${'☆'.repeat(5 - score)}</span>`;
+    }
+
+    function isBorrowable(stock) {
+      return Number(stock) > 0;
+    }
+
+    function borrowStatusHtml(stock) {
+      if (isBorrowable(stock)) {
+        return '<span class="borrow-badge yes">貸出可能</span>';
+      }
+      return '<span class="borrow-badge no">貸出不可</span>';
+    }
+
+    function coverCell(imageUrl, title) {
+      if (!imageUrl) {
+        return '<div class="cover-empty">画像なし</div>';
+      }
+      return `<img class="book-cover" src="${escapeHtml(imageUrl)}" alt="${escapeHtml(title)}" loading="lazy" />`;
+    }
+
+    function renderBookPagination(totalPages) {
+      if (totalPages <= 1) {
+        bookPaginationEl.hidden = true;
+        bookPaginationEl.innerHTML = '';
+        return;
+      }
+
+      const pages = Array.from({ length: totalPages }, (_, index) => index + 1)
+        .map((page) => `<button class="page-btn${page === currentBookPage ? ' active' : ''}" type="button" data-page="${page}">${page}</button>`)
+        .join('');
+
+      bookPaginationEl.hidden = false;
+      bookPaginationEl.innerHTML = `
+        <button class="page-btn" type="button" data-action="prev" ${currentBookPage === 1 ? 'disabled' : ''}>前へ</button>
+        ${pages}
+        <button class="page-btn" type="button" data-action="next" ${currentBookPage === totalPages ? 'disabled' : ''}>次へ</button>
+      `;
+    }
+
+    function renderBooks() {
+      bookListEl.innerHTML = '';
+      if (!books.length) {
+        bookListEl.innerHTML = '<tr><td colspan="8" class="empty">書籍なし。先に追加してください。</td></tr>';
+        bookPaginationEl.hidden = true;
+        bookPaginationEl.innerHTML = '';
+        return;
+      }
+
+      const totalPages = Math.max(1, Math.ceil(books.length / BOOKS_PER_PAGE));
+      if (currentBookPage > totalPages) {
+        currentBookPage = totalPages;
+      }
+      if (currentBookPage < 1) {
+        currentBookPage = 1;
+      }
+
+      const startIndex = (currentBookPage - 1) * BOOKS_PER_PAGE;
+      const pageBooks = books.slice(startIndex, startIndex + BOOKS_PER_PAGE);
+
+      pageBooks.forEach((book) => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${escapeHtml(book.title)}</td>
+          <td>${coverCell(book.image, book.title)}</td>
+          <td>${escapeHtml(book.author)}</td>
+          <td>${escapeHtml(book.category)}</td>
+          <td>${formatInt(book.stock)}</td>
+          <td>${borrowStatusHtml(book.stock)}</td>
+          <td>${starText(book.recommendationIndex)}</td>
+          <td>
+            <div class="row-actions">
+              <button class="secondary" type="button" data-action="edit" data-id="${book.id}">編集</button>
+              <button class="warn" type="button" data-action="delete" data-id="${book.id}">削除</button>
+            </div>
+          </td>
+        `;
+        bookListEl.appendChild(row);
+      });
+
+      renderBookPagination(totalPages);
+    }
+
+    async function loadBooks() {
+      try {
+        const res = await fetch('/api/books');
+        if (!res.ok) {
+          throw new Error('書籍の読み込みに失敗しました');
+        }
+        const data = await res.json();
+        books = Array.isArray(data) ? data : [];
+        renderBooks();
+        setBookStatus(`合計 ${books.length} 冊`, false);
+      } catch (error) {
+        books = [];
+        renderBooks();
+        setBookStatus(error.message || '書籍の読み込みに失敗しました', true);
+      }
+    }
+
+    async function deleteBook(id) {
+      try {
+        const res = await fetch(`/api/books/${id}`, {
+          method: 'DELETE',
+          headers: adminHeaders()
+        });
+        if (!res.ok) {
+          const errorBody = await res.json().catch(() => ({}));
+          throw new Error(errorBody.message || '削除失敗');
+        }
+        setBookStatus('書籍を削除しました', false);
+        await loadBooks();
+      } catch (error) {
+        setBookStatus(error.message || '削除失敗', true);
+      }
+    }
+
+    bookListEl.addEventListener('click', (event) => {
+      const target = event.target;
+      if (!(target instanceof HTMLElement)) {
+        return;
+      }
+      const btn = target.closest('button[data-action]');
+      if (!btn) {
+        return;
+      }
+
+      const id = Number(btn.dataset.id);
+      if (!id) {
+        return;
+      }
+
+      if (btn.dataset.action === 'edit') {
+        window.location.href = `/admin/book-upload.html?id=${id}`;
+      }
+      if (btn.dataset.action === 'delete') {
+        deleteBook(id);
+      }
+    });
+
+    bookPaginationEl.addEventListener('click', (event) => {
+      const target = event.target;
+      if (!(target instanceof HTMLElement)) {
+        return;
+      }
+      const btn = target.closest('button');
+      if (!btn || btn.disabled) {
+        return;
+      }
+
+      const totalPages = Math.max(1, Math.ceil(books.length / BOOKS_PER_PAGE));
+      if (btn.dataset.action === 'prev') {
+        currentBookPage = Math.max(1, currentBookPage - 1);
+      } else if (btn.dataset.action === 'next') {
+        currentBookPage = Math.min(totalPages, currentBookPage + 1);
+      } else if (btn.dataset.page) {
+        const page = Number(btn.dataset.page);
+        if (Number.isFinite(page) && page >= 1 && page <= totalPages) {
+          currentBookPage = page;
+        }
+      }
+
+      renderBooks();
+    });
+
+    loadBooks();
+  </script>
+</body>
+</html>

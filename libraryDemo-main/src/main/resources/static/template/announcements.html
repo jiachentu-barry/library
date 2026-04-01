@@ -1,0 +1,81 @@
+﻿<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>お知らせ一覧</title>
+  <link rel="stylesheet" href="/css/announcements.css" />
+</head>
+<body>
+  <div class="container">
+    <h1>システムお知らせ</h1>
+    <div class="top-links">
+      <a href="/">ホームへ戻る</a>
+      <a id="admin-entry-link" href="/template/admin/announcements.html" hidden>管理画面へ</a>
+    </div>
+    <div id="announcement-list"></div>
+  </div>
+
+  <script src="/js/auth.js"></script>
+  <script>
+    const AUTH = window.Demo5Auth;
+    const adminEntryLinkEl = document.getElementById('admin-entry-link');
+    const listEl = document.getElementById('announcement-list');
+
+    AUTH.loadCurrentUser().then((user) => {
+      adminEntryLinkEl.hidden = !AUTH.isAdmin(user);
+    });
+
+    function escapeHtml(text) {
+      return String(text || '')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;')
+        .replaceAll('"', '&quot;')
+        .replaceAll("'", '&#39;');
+    }
+
+    function formatTime(value) {
+      if (!value) {
+        return '-';
+      }
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) {
+        return value;
+      }
+      return date.toLocaleString();
+    }
+
+    function renderList(items) {
+      listEl.innerHTML = '';
+      if (!items.length) {
+        listEl.innerHTML = '<p class="empty">お知らせなし</p>';
+        return;
+      }
+
+      items.forEach((item) => {
+        const box = document.createElement('article');
+        box.className = 'announcement-item';
+        box.innerHTML = `
+          <h3>${escapeHtml(item.title)} <span class="status-tag">公開済み</span></h3>
+          <p class="announcement-meta">公開日時：${formatTime(item.publishedAt)}</p>
+          <p>${escapeHtml(item.content)}</p>
+        `;
+        listEl.appendChild(box);
+      });
+    }
+
+    async function loadAnnouncements() {
+      try {
+        const res = await fetch('/api/announcements');
+        const data = await res.json();
+        renderList(Array.isArray(data) ? data : []);
+      } catch (error) {
+        listEl.innerHTML = '<p class="empty">読み込みに失敗しました。後でリロードしてください。</p>';
+      }
+    }
+
+    loadAnnouncements();
+  </script>
+</body>
+</html>
