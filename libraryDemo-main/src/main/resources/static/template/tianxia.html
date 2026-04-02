@@ -17,7 +17,7 @@
         <a id="nav-home" class="site-nav-home" href="/template/index.html" hidden>管理画面へ</a>
         <a id="nav-login" href="/template/login.html">ユーザーログイン</a>
         <a id="nav-register" href="/template/register.html">ユーザー登録</a>
-        <a href="/template/profile.html">私の貸出</a>
+        <a id="nav-profile" href="/template/profile.html">私の貸出</a>
         <span id="nav-user" class="nav-user" hidden></span>
         <button id="nav-logout" class="nav-logout" type="button" hidden>ログアウト</button>
       </nav>
@@ -27,18 +27,22 @@
   <div class="wrap">
     <div class="content">
       <aside class="panel panel-sticky">
-        <h2 class="section-title">システムお知らせ</h2>
-        <p class="section-sub">最新情報。クリックして詳細を表示。</p>
-        <div id="announcement-list"></div>
+        <div class="mobile-feature-row">
+          <section class="feature-block feature-announcements">
+            <h2 class="section-title">システムお知らせ</h2>
+            <p class="section-sub">最新情報。クリックして詳細を表示。</p>
+            <div id="announcement-list"></div>
+          </section>
 
-        <hr class="section-divider" />
-
-        <div class="section-title-row">
-          <h2 class="section-title">おすすめ書籍</h2>
-          <button class="refresh-btn" id="refresh-recommended" title="ランダムシャッフル">シャッフル</button>
+          <section class="feature-block feature-recommended">
+            <div class="section-title-row">
+              <h2 class="section-title">おすすめ書籍</h2>
+              <button class="refresh-btn" id="refresh-recommended" title="ランダムシャッフル">シャッフル</button>
+            </div>
+            <p class="section-sub">おすすめの3冊をランダムに表示。</p>
+            <div id="recommended-list"></div>
+          </section>
         </div>
-        <p class="section-sub">おすすめの3冊をランダムに表示。</p>
-        <div id="recommended-list"></div>
       </aside>
 
       <section class="panel">
@@ -55,6 +59,12 @@
     </div>
   </div>
 
+  <nav class="mobile-tabbar" aria-label="モバイルタブ">
+    <a id="tab-home" class="tab-item" href="/template/index.html" hidden>管理画面へ</a>
+    <a id="tab-profile" class="tab-item" href="/template/profile.html">私の貸出</a>
+    <button id="tab-logout" class="tab-item tab-button" type="button" hidden>ログアウト</button>
+  </nav>
+
   <script src="/js/auth.js"></script>
   <script>
     const AUTH = window.Demo5Auth;
@@ -66,8 +76,12 @@
     const bookPaginationEl = document.getElementById('book-pagination');
     const borrowStatsEl = document.getElementById('borrow-stats');
     const navHomeEl = document.getElementById('nav-home');
+    const navProfileEl = document.getElementById('nav-profile');
     const navUserEl = document.getElementById('nav-user');
     const navLogoutEl = document.getElementById('nav-logout');
+    const tabHomeEl = document.getElementById('tab-home');
+    const tabProfileEl = document.getElementById('tab-profile');
+    const tabLogoutEl = document.getElementById('tab-logout');
 
     const BOOKS_PER_PAGE = 6;
     let books = [];
@@ -77,6 +91,7 @@
     let selectedBookId = null;
     let activeBorrowMap = {}; // bookId -> borrowRecordId
 
+
     async function syncAuthUi() {
       const user = await AUTH.loadCurrentUser();
       const username = user?.username || '';
@@ -85,13 +100,18 @@
       document.getElementById('nav-login').hidden = loggedIn;
       document.getElementById('nav-register').hidden = loggedIn;
       navHomeEl.hidden = !isAdmin;
+      tabHomeEl.hidden = !isAdmin;
       if (!loggedIn) {
         navUserEl.hidden = true;
         navLogoutEl.hidden = true;
+        tabLogoutEl.hidden = true;
+        tabProfileEl.hidden = false;
         return;
       }
       navUserEl.hidden = false;
       navLogoutEl.hidden = false;
+      tabLogoutEl.hidden = false;
+      tabProfileEl.hidden = false;
       navUserEl.textContent = `ログイン中：${username}${isAdmin ? '（管理者）' : ''}`;
     }
 
@@ -707,6 +727,12 @@
     });
 
     navLogoutEl.addEventListener('click', () => {
+      AUTH.clearUser();
+      syncAuthUi();
+      window.location.href = '/login.html';
+    });
+
+    tabLogoutEl.addEventListener('click', () => {
       AUTH.clearUser();
       syncAuthUi();
       window.location.href = '/login.html';

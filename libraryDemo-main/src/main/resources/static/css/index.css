@@ -24,6 +24,7 @@
         radial-gradient(circle at 88% 14%, #cfe4d5 0 24%, transparent 25%),
         linear-gradient(140deg, var(--bg-1), var(--bg-2));
       min-height: 100vh;
+      overflow-x: hidden;
     }
 
     .wrap {
@@ -580,6 +581,24 @@
     @media (max-width: 900px) {
       .wrap {
         grid-template-columns: 1fr;
+        width: min(1100px, 96vw);
+        margin: 16px auto;
+      }
+
+      .panel {
+        padding: 14px;
+      }
+
+      .book-form {
+        grid-template-columns: 1fr;
+      }
+
+      .auth-inline {
+        margin-left: 0;
+      }
+
+      .chart-sub canvas {
+        height: 180px !important;
       }
 
       th,
@@ -591,5 +610,43 @@
       .row-actions button {
         padding: 5px 8px;
         font-size: 0.76rem;
+      }
+    }
+
+    @media (max-width: 600px) {
+      .wrap {
+        width: 100%;
+        padding: 0 10px;
+        margin: 10px 0 18px;
+      }
+
+      .utility-links {
+        gap: 10px;
+      }
+
+      .auth-inline {
+        width: 100%;
+      }
+
+      .actions button,
+      .auth-logout {
+        width: 100%;
+      }
+
+      .nav-group-label {
+        padding-left: 8px;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .wrap {
+        width: 100%;
+        max-width: none;
+        margin: 0;
+        padding: clamp(10px, 3.2vw, 16px);
+      }
+
+      .panel {
+        border-radius: 12px;
       }
     }

@@ -100,3 +100,19 @@
 
     .status.error { color: var(--danger); }
     .status.ok { color: var(--ok); }
+
+    @media (max-width: 768px) {
+      body {
+        display: block;
+        min-height: 100dvh;
+        padding: clamp(10px, 3.2vw, 16px);
+      }
+
+      .card {
+        width: 100%;
+        max-width: none;
+        margin: 0;
+        border-radius: 12px;
+        padding: clamp(14px, 4vw, 20px);
+      }
+    }

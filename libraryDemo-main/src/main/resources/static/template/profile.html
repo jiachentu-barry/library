@@ -13,7 +13,8 @@
         <h1 class="site-title">私の貸出</h1>
         <p class="site-title-sub">現在の貸出と履歴を確認</p>
       </div>
-      <nav class="site-nav">
+      <button id="mobile-nav-knob" class="mobile-nav-knob" type="button" aria-expanded="false" aria-controls="mobile-nav-dial" aria-label="打开导航菜单">菜单</button>
+      <nav id="mobile-nav-dial" class="site-nav">
         <a href="/template/tianxia.html">書籍一覧</a>
         <a id="nav-login" href="/template/login.html">ユーザーログイン</a>
         <a id="nav-register" href="/template/register.html">ユーザー登録</a>
@@ -42,8 +43,85 @@
     const AUTH = window.Demo5Auth;
     const navUserEl = document.getElementById('nav-user');
     const navLogoutEl = document.getElementById('nav-logout');
+    const mobileNavKnobEl = document.getElementById('mobile-nav-knob');
+    const mobileNavDialEl = document.getElementById('mobile-nav-dial');
     const activeEl = document.getElementById('active-borrows');
     const historyEl = document.getElementById('history-borrows');
+
+    function isMobileNavMode() {
+      return window.matchMedia('(max-width: 700px)').matches;
+    }
+
+    function closeMobileNavDial() {
+      if (!mobileNavDialEl || !mobileNavKnobEl) {
+        return;
+      }
+      mobileNavDialEl.classList.remove('dial-open');
+      mobileNavKnobEl.setAttribute('aria-expanded', 'false');
+      document.body.classList.remove('nav-dial-open');
+    }
+
+    function toggleMobileNavDial() {
+      if (!mobileNavDialEl || !mobileNavKnobEl || !isMobileNavMode()) {
+        return;
+      }
+      const opening = !mobileNavDialEl.classList.contains('dial-open');
+      mobileNavDialEl.classList.toggle('dial-open', opening);
+      mobileNavKnobEl.setAttribute('aria-expanded', String(opening));
+      document.body.classList.toggle('nav-dial-open', opening);
+    }
+
+    function setupMobileNavDial() {
+      if (!mobileNavDialEl || !mobileNavKnobEl) {
+        return;
+      }
+      const actions = Array.from(mobileNavDialEl.querySelectorAll('a, button.nav-logout'));
+      const radius = 104;
+      const startDeg = -140;
+      const spanDeg = 130;
+      const step = actions.length > 1 ? spanDeg / (actions.length - 1) : 0;
+      actions.forEach((item, index) => {
+        const deg = startDeg + step * index;
+        const rad = (deg * Math.PI) / 180;
+        const x = Math.cos(rad) * radius;
+        const y = Math.sin(rad) * radius;
+        item.style.setProperty('--dial-x', `${x.toFixed(1)}px`);
+        item.style.setProperty('--dial-y', `${y.toFixed(1)}px`);
+      });
+
+      mobileNavKnobEl.addEventListener('click', (event) => {
+        event.stopPropagation();
+        toggleMobileNavDial();
+      });
+
+      document.addEventListener('click', (event) => {
+        if (!isMobileNavMode() || !mobileNavDialEl.classList.contains('dial-open')) {
+          return;
+        }
+        if (!mobileNavDialEl.contains(event.target) && event.target !== mobileNavKnobEl) {
+          closeMobileNavDial();
+        }
+      });
+
+      mobileNavDialEl.addEventListener('click', (event) => {
+        const action = event.target.closest('a, button.nav-logout');
+        if (action) {
+          closeMobileNavDial();
+        }
+      });
+
+      document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') {
+          closeMobileNavDial();
+        }
+      });
+
+      window.addEventListener('resize', () => {
+        if (!isMobileNavMode()) {
+          closeMobileNavDial();
+        }
+      });
+    }
 
     function escapeHtml(text) {
       return String(text || '')
@@ -162,6 +240,7 @@
       window.location.href = '/login.html';
     });
 
+    setupMobileNavDial();
     syncAuthUi();
     loadBorrows();
   </script>

@@ -1,15 +1,9 @@
 package com.example.demo5.controller;
 
-import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Locale;
 
-import com.example.demo5.entity.AppUser;
 import com.example.demo5.entity.Announcement;
-import com.example.demo5.enums.AnnouncementStatus;
-import com.example.demo5.enums.UserRole;
-import com.example.demo5.repository.AnnouncementRepository;
-import com.example.demo5.repository.AppUserRepository;
+import com.example.demo5.service.AnnouncementService;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -26,42 +20,17 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api")
 public class AnnouncementController {
 
-    private final AnnouncementRepository announcementRepository;
-    private final AppUserRepository appUserRepository;
+    private final AnnouncementService announcementService;
 
-    public AnnouncementController(AnnouncementRepository announcementRepository, AppUserRepository appUserRepository) {
-        this.announcementRepository = announcementRepository;
-        this.appUserRepository = appUserRepository;
+    public AnnouncementController(AnnouncementService announcementService) {
+        this.announcementService = announcementService;
     }
 
     @PostMapping("/admin/announcements")
     public ResponseEntity<?> createAnnouncement(@RequestHeader(value = "X-Auth-Username", required = false) String authUsername,
                                                 @RequestBody AnnouncementRequest request) {
-        ResponseEntity<ApiMessage> adminCheck = requireAdmin(authUsername);
-        if (adminCheck != null) {
-            return adminCheck;
-        }
-        String title = request.title() == null ? "" : request.title().trim();
-        String content = request.content() == null ? "" : request.content().trim();
-        AnnouncementStatus status = parseStatus(request.status());
-
-        if (title.isEmpty()) {
-            return ResponseEntity.badRequest().body(new ApiMessage("标题不能为空"));
-        }
-        if (content.isEmpty()) {
-            return ResponseEntity.badRequest().body(new ApiMessage("内容不能为空"));
-        }
-        if (status == null) {
-            return ResponseEntity.badRequest().body(new ApiMessage("状态不合法"));
-        }
-
-        Announcement announcement = new Announcement();
-        announcement.setTitle(title);
-        announcement.setContent(content);
-        announcement.setStatus(status);
-        announcement.setPublishedAt(LocalDateTime.now());
-
-        Announcement saved = announcementRepository.save(announcement);
+        Announcement saved = announcementService.createAnnouncement(authUsername,
+                new AnnouncementService.AnnouncementCommand(request.title(), request.content(), request.status()));
         return ResponseEntity.status(HttpStatus.CREATED).body(saved);
     }
 
@@ -69,84 +38,22 @@ public class AnnouncementController {
     public ResponseEntity<?> updateAnnouncement(@RequestHeader(value = "X-Auth-Username", required = false) String authUsername,
                                                 @PathVariable Long id,
                                                 @RequestBody AnnouncementRequest request) {
-        ResponseEntity<ApiMessage> adminCheck = requireAdmin(authUsername);
-        if (adminCheck != null) {
-            return adminCheck;
-        }
-        Announcement announcement = announcementRepository.findById(id)
-                .orElse(null);
-        if (announcement == null) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(new ApiMessage("公告不存在"));
-        }
-
-        String title = request.title() == null ? "" : request.title().trim();
-        String content = request.content() == null ? "" : request.content().trim();
-        AnnouncementStatus status = parseStatus(request.status());
-
-        if (title.isEmpty()) {
-            return ResponseEntity.badRequest().body(new ApiMessage("标题不能为空"));
-        }
-        if (content.isEmpty()) {
-            return ResponseEntity.badRequest().body(new ApiMessage("内容不能为空"));
-        }
-        if (status == null) {
-            return ResponseEntity.badRequest().body(new ApiMessage("状态不合法"));
-        }
-
-        announcement.setTitle(title);
-        announcement.setContent(content);
-        announcement.setStatus(status);
-
-        Announcement saved = announcementRepository.save(announcement);
+        Announcement saved = announcementService.updateAnnouncement(authUsername, id,
+                new AnnouncementService.AnnouncementCommand(request.title(), request.content(), request.status()));
         return ResponseEntity.ok(saved);
     }
 
     @GetMapping("/admin/announcements")
     public ResponseEntity<?> listAnnouncementsForAdmin(@RequestHeader(value = "X-Auth-Username", required = false) String authUsername) {
-        ResponseEntity<ApiMessage> adminCheck = requireAdmin(authUsername);
-        if (adminCheck != null) {
-            return adminCheck;
-        }
-        return ResponseEntity.ok(announcementRepository.findAllByOrderByPublishedAtDesc());
+        return ResponseEntity.ok(announcementService.listAnnouncementsForAdmin(authUsername));
     }
 
     @GetMapping("/announcements")
     public List<Announcement> listPublicAnnouncements() {
-        return announcementRepository.findAllByOrderByPublishedAtDesc()
-                .stream()
-                .filter(item -> item.getStatus() == AnnouncementStatus.PUBLISHED)
-                .toList();
-    }
-
-    private AnnouncementStatus parseStatus(String rawStatus) {
-        if (rawStatus == null || rawStatus.isBlank()) {
-            return AnnouncementStatus.PUBLISHED;
-        }
-        try {
-            return AnnouncementStatus.valueOf(rawStatus.trim().toUpperCase(Locale.ROOT));
-        } catch (IllegalArgumentException ex) {
-            return null;
-        }
-    }
-
-    private ResponseEntity<ApiMessage> requireAdmin(String authUsername) {
-        String username = authUsername == null ? "" : authUsername.trim();
-        if (username.isEmpty()) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new ApiMessage("请先登录管理员账号"));
-        }
-        AppUser user = appUserRepository.findByUsernameIgnoreCase(username).orElse(null);
-        if (user == null) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(new ApiMessage("用户不存在"));
-        }
-        if (user.getRole() != UserRole.ADMIN) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(new ApiMessage("仅管理员可访问后台管理"));
-        }
-        return null;
+        return announcementService.listPublicAnnouncements();
     }
 
     public record AnnouncementRequest(String title, String content, String status) {
     }
 
-    public record ApiMessage(String message) {
-    }
 }

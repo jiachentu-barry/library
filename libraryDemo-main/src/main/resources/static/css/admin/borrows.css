@@ -416,3 +416,49 @@
         font-size: 0.80rem;
       }
     }
+
+    @media (max-width: 768px) {
+      body {
+        padding-bottom: calc(74px + env(safe-area-inset-bottom));
+      }
+
+      .container {
+        width: 100%;
+        max-width: none;
+        margin: 0;
+        padding: clamp(10px, 3.2vw, 16px);
+      }
+
+      .card {
+        border-radius: 12px;
+      }
+
+      .admin-nav {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        z-index: 1000;
+        margin: 0;
+        padding: 8px 10px calc(8px + env(safe-area-inset-bottom));
+        border-top: 1px solid var(--line);
+        background: rgba(255, 253, 248, 0.96);
+        backdrop-filter: blur(8px);
+        display: grid;
+        grid-auto-flow: column;
+        grid-auto-columns: minmax(84px, 1fr);
+        gap: 8px;
+        overflow-x: auto;
+        flex-wrap: nowrap;
+      }
+
+      .admin-nav a {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 40px;
+        white-space: nowrap;
+        font-size: 0.76rem;
+        padding: 7px 10px;
+      }
+    }

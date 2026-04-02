@@ -7,7 +7,17 @@ import org.springframework.web.bind.annotation.GetMapping;
 public class HomeController {
 
     @GetMapping("/")
-    public String rootToLogin() {
-        return "redirect:/template/login.html";
+    public String rootToIndex() {
+        return "forward:/index.html";
+    }
+
+    @GetMapping("/login.html")
+    public String loginAlias() {
+        return "forward:/template/login.html";
+    }
+
+    @GetMapping("/template/index.html")
+    public String templateIndexAlias() {
+        return "forward:/index.html";
     }
 }
