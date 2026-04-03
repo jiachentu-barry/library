@@ -1,0 +1,12 @@
+{
+  "java.project.sourcePaths": [
+    "libraryDemo-main/src/main/java",
+    "libraryDemo-main/src/test/java"
+  ],
+  "java.project.outputPath": "libraryDemo-main/target/classes",
+  "java.project.referencedLibraries": [
+    "C:/Users/61413/.m2/repository/**/*.jar"
+  ],
+  "java.configuration.updateBuildConfiguration": "automatic",
+  "java.import.maven.enabled": true
+}
